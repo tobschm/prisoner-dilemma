@@ -31,6 +31,17 @@ let advanceTimer = null;   // setTimeout-Handle für den Auto-Advance
 // Kumulative Entscheidungs-Statistik über alle Paar-Runden des aktuellen Spiels.
 let stats = { bb: 0, ss: 0, mixed: 0 }; // beide verraten / beide schweigen / gemischt
 
+// Einfacher Logger mit Zeitstempel (Server-Konsole).
+function log(...args) {
+  console.log(`[${new Date().toISOString()}]`, ...args);
+}
+
+// Name zu einer Socket-ID (Fallback: die ID selbst).
+function nameOf(socketId) {
+  const p = players.get(socketId);
+  return p ? p.name : socketId;
+}
+
 // ---------------------------------------------------------------------------
 // Hilfsfunktionen
 // ---------------------------------------------------------------------------
@@ -129,6 +140,11 @@ function startRound(n) {
     }
   }
 
+  const pairSummary = pairs
+    .map((pr) => (pr.bye ? `${nameOf(pr.a)} (Freilos)` : `${nameOf(pr.a)} vs. ${nameOf(pr.b)}`))
+    .join(', ');
+  log(`Runde ${currentRound}/${TOTAL_ROUNDS} gestartet — Paare: ${pairSummary}`);
+
   // Falls die Runde bereits komplett aus Freilosen besteht (z.B. nur 1 Spieler), direkt prüfen.
   maybeFinishRound();
 }
@@ -151,6 +167,8 @@ function resolvePair(pr) {
   if (pr.choiceA === 'betray' && pr.choiceB === 'betray') stats.bb++;
   else if (pr.choiceA === 'silent' && pr.choiceB === 'silent') stats.ss++;
   else stats.mixed++;
+
+  log(`Ergebnis R${currentRound}: ${nameOf(pr.a)} (${pr.choiceA}, ${yearsA}J) vs. ${nameOf(pr.b)} (${pr.choiceB}, ${yearsB}J)`);
 
   if (pa && pa.connected) {
     io.to(pr.a).emit('roundResult', {
@@ -202,6 +220,8 @@ function endGame() {
     .map((p) => ({ name: p.name, totalYears: p.totalYears }))
     .sort((x, y) => x.totalYears - y.totalYears);
 
+  log('Spiel beendet. Rangliste: ' + leaderboard.map((e, i) => `${i + 1}. ${e.name} (${e.totalYears}J)`).join(', '));
+  log(`Entscheidungs-Statistik: beide-Verraten=${stats.bb}, beide-Schweigen=${stats.ss}, gemischt=${stats.mixed}`);
   io.emit('gameOver', { leaderboard, stats: { ...stats } });
 }
 
@@ -245,6 +265,11 @@ io.on('connection', (socket) => {
       socket.emit('waiting', { phase });
     }
     broadcastLobby();
+
+    log(
+      `"${cleanName}" ist beigetreten${isFirst ? ' [Host]' : ''}` +
+        `${phase !== 'lobby' ? ' (Spiel läuft — wartet)' : ''}. Verbunden: ${connectedPlayers().length}`
+    );
   });
 
   socket.on('startGame', () => {
@@ -255,6 +280,7 @@ io.on('connection', (socket) => {
       socket.emit('errorMsg', { message: 'Mindestens 2 Spieler werden zum Starten benötigt.' });
       return;
     }
+    log(`Host "${p.name}" startet das Spiel (${connectedPlayers().length} Spieler)`);
     startRound(1);
   });
 
@@ -273,6 +299,8 @@ io.on('connection', (socket) => {
       pr.choiceB = choice;
     }
 
+    log(`${nameOf(socket.id)} wählt "${choice === 'betray' ? 'Verraten' : 'Stillschweigen'}" (Runde ${currentRound})`);
+
     resolvePair(pr);
     maybeFinishRound();
   });
@@ -281,6 +309,7 @@ io.on('connection', (socket) => {
     const p = players.get(socket.id);
     if (!p || !p.isHost) return;
     if (phase !== 'finished') return;
+    log(`Host "${p.name}" startet ein neues Spiel — zurück in die Lobby`);
     resetToLobby();
   });
 
@@ -289,6 +318,7 @@ io.on('connection', (socket) => {
     const p = players.get(socket.id);
     if (!p || !p.isHost) return;
     if (phase === 'lobby') return; // nichts abzubrechen
+    log(`Host "${p.name}" bricht das Spiel ab (Phase "${phase}", Runde ${currentRound})`);
     resetToLobby();
     io.emit('gameAborted');
   });
@@ -319,12 +349,19 @@ io.on('connection', (socket) => {
             nextInSeconds: NEXT_ROUND_SECONDS,
             partnerLeft: true,
           });
+          log(`${p.name} hat die Verbindung mitten in Runde ${currentRound} verloren — ${partner.name} erhält ein Freilos`);
         }
       }
     }
 
     players.delete(socket.id);
     ensureHost();
+
+    log(`"${p.name}" hat die Session verlassen. Verbunden: ${connectedPlayers().length}`);
+    if (wasHost) {
+      const nh = currentHost();
+      if (nh) log(`Host hat verlassen — neuer Host: "${nh.name}"`);
+    }
 
     if (phase === 'lobby' || phase === 'finished') {
       broadcastLobby();
