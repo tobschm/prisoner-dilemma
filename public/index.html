@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gefangenen-Dilemma</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <button id="abort-btn" class="btn btn-abort hidden">✕ Spiel abbrechen</button>
+
+  <div class="container">
+    <header>
+      <h1>🔒 Gefangenen-Dilemma</h1>
+    </header>
+
+    <!-- Screen: Beitreten -->
+    <section id="screen-join" class="screen">
+      <p class="lead">Gib deinen Namen ein, um der Session beizutreten.</p>
+      <form id="join-form" class="join-form">
+        <input id="name-input" type="text" maxlength="30" placeholder="Dein Name" autocomplete="off" required />
+        <button type="submit" class="btn btn-primary">Beitreten</button>
+      </form>
+    </section>
+
+    <!-- Screen: Lobby -->
+    <section id="screen-lobby" class="screen hidden">
+      <h2>Lobby</h2>
+      <p class="lead">Spieler in der Session:</p>
+      <ul id="player-list" class="player-list"></ul>
+      <div id="host-controls" class="hidden">
+        <button id="start-btn" class="btn btn-primary">Spiel starten</button>
+        <p class="hint" id="start-hint"></p>
+      </div>
+      <p id="waiting-host" class="hint hidden">Warte auf den Host, der das Spiel startet…</p>
+    </section>
+
+    <!-- Screen: Warten (mitten im laufenden Spiel beigetreten) -->
+    <section id="screen-waiting" class="screen hidden">
+      <h2>Spiel läuft bereits</h2>
+      <p class="lead">Bitte warte — du nimmst am nächsten Spiel teil.</p>
+    </section>
+
+    <!-- Screen: Spiel (Entscheidung) -->
+    <section id="screen-play" class="screen hidden">
+      <div class="round-badge" id="play-round"></div>
+      <p class="lead">Dein Komplize: <strong id="partner-name"></strong></p>
+      <p class="explain">
+        Ihr wurdet beide verhaftet. Gestehst du und verrätst deinen Komplizen,
+        oder schweigst du? Eure beiden Entscheidungen zusammen bestimmen die Haftjahre.
+      </p>
+      <div class="choice-buttons">
+        <button id="btn-betray" class="btn btn-betray">Komplizen verraten</button>
+        <button id="btn-silent" class="btn btn-silent">Stillschweigen</button>
+      </div>
+      <p id="waiting-partner" class="hint hidden">Warte auf die Entscheidung deines Mitspielers…</p>
+    </section>
+
+    <!-- Screen: Freilos -->
+    <section id="screen-bye" class="screen hidden">
+      <div class="round-badge" id="bye-round"></div>
+      <h2>🎟️ Freilos</h2>
+      <p class="lead">Du setzt diese Runde aus (0 Jahre Haft).</p>
+      <p class="hint">In der nächsten Runde bist du wieder dabei.</p>
+    </section>
+
+    <!-- Screen: Ergebnis -->
+    <section id="screen-result" class="screen hidden">
+      <div class="round-badge" id="result-round"></div>
+      <h2 id="result-headline"></h2>
+      <div class="result-grid">
+        <div class="result-card">
+          <div class="result-label">Du</div>
+          <div class="result-choice" id="your-choice"></div>
+          <div class="result-years" id="your-years"></div>
+        </div>
+        <div class="result-card">
+          <div class="result-label" id="partner-label">Komplize</div>
+          <div class="result-choice" id="partner-choice"></div>
+          <div class="result-years" id="partner-years"></div>
+        </div>
+      </div>
+      <p class="explain" id="result-explain"></p>
+      <p class="hint" id="next-countdown"></p>
+    </section>
+
+    <!-- Screen: Game Over -->
+    <section id="screen-over" class="screen hidden">
+      <h2>🏁 Endergebnis</h2>
+      <p class="lead">Gesamt-Haftjahre über alle 3 Runden — wer am wenigsten hat, gewinnt.</p>
+      <ol id="leaderboard" class="leaderboard"></ol>
+
+      <div class="dilemma-stats">
+        <h3>Alle Entscheidungen über das ganze Spiel</h3>
+        <pre id="dilemma-table" class="dilemma-table"></pre>
+      </div>
+
+      <div id="over-host-controls" class="hidden">
+        <button id="newgame-btn" class="btn btn-primary">Neues Spiel</button>
+      </div>
+      <p id="over-waiting-host" class="hint hidden">Warte auf den Host für ein neues Spiel…</p>
+    </section>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

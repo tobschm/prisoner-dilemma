@@ -1,0 +1,15 @@
+{
+  "name": "prisoner-dilemma",
+  "version": "1.0.0",
+  "description": "Echtzeit-Multiplayer-Website zum Durchspielen und Erlernen des Gefangenen-Dilemmas",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "prisoner-dilemma": "file:",
+    "socket.io": "^4.7.5"
+  }
+}
